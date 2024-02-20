@@ -4,6 +4,7 @@ using UnityEngine;
 
 public static class Chunk
 {
+
     public static void LoopThroughTheBlocks(ChunkData chunkData, Action<int, int, int> actionToPerform)
     {
         for (int index = 0; index < chunkData.blocks.Length; index++)
@@ -103,12 +104,11 @@ public static class Chunk
         };
         return pos;
     }
-    
+
     internal static List<ChunkData> GetEdgeNeighbourChunk(ChunkData chunkData, Vector3Int worldPosition)
     {
         Vector3Int chunkPosition = GetBlockInChunkCoordinates(chunkData, worldPosition);
         List<ChunkData> neighboursToUpdate = new List<ChunkData>();
-
         if (chunkPosition.x == 0)
         {
             neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition - Vector3Int.right));
@@ -116,10 +116,6 @@ public static class Chunk
         if (chunkPosition.x == chunkData.chunkSize - 1)
         {
             neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition + Vector3Int.right));
-        }
-        if (chunkPosition.x == chunkData.chunkSize + 1)
-        {
-            neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition - Vector3Int.right));
         }
         if (chunkPosition.y == 0)
         {
@@ -129,10 +125,6 @@ public static class Chunk
         {
             neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition + Vector3Int.up));
         }
-        if (chunkPosition.y == chunkData.chunkHeight + 1)
-        {
-            neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition - Vector3Int.up));
-        }
         if (chunkPosition.z == 0)
         {
             neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition - Vector3Int.forward));
@@ -141,12 +133,8 @@ public static class Chunk
         {
             neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition + Vector3Int.forward));
         }
-        if (chunkPosition.z == chunkData.chunkSize + 1)
-        {
-            neighboursToUpdate.Add(WorldDataHelper.GetChunkData(chunkData.worldReference, worldPosition - Vector3Int.forward));
-        }
         return neighboursToUpdate;
-    }   
+    }
 
     internal static bool IsOnEdge(ChunkData chunkData, Vector3Int worldPosition)
     {

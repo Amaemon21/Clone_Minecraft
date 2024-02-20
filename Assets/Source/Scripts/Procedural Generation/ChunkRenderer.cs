@@ -7,13 +7,14 @@ using UnityEngine;
 [RequireComponent(typeof(MeshCollider))]
 public class ChunkRenderer : MonoBehaviour
 {
-    MeshFilter meshFilter;
-    MeshCollider meshCollider;
-    Mesh mesh;
-    public bool showGizmo = false;
+    MeshFilter meshFilter; // Фильтр меша
+    MeshCollider meshCollider; // Коллайдер меша
+    Mesh mesh; // Меш
+    public bool showGizmo = false; // Показывать ли гизмо
 
-    public ChunkData ChunkData { get; private set; }
+    public ChunkData ChunkData { get; private set; } // Данные чанка
 
+    // Флаг, указывающий, изменен ли чанк игроком
     public bool ModifiedByThePlayer
     {
         get
@@ -26,21 +27,29 @@ public class ChunkRenderer : MonoBehaviour
         }
     }
 
-    private void Awake()
+    // Инициализация при запуске
+    public void Awake()
+    {
+        Init();
+    }
+
+    // Инициализация компонентов
+    public void Init()
     {
         meshFilter = GetComponent<MeshFilter>();
         meshCollider = GetComponent<MeshCollider>();
         mesh = meshFilter.mesh;
     }
 
+    // Инициализация чанка
     public void InitializeChunk(ChunkData data)
     {
         this.ChunkData = data;
     }
 
+    // Рендеринг меша
     private void RenderMesh(MeshData meshData)
     {
-        Mesh collisionMesh = new Mesh();
         mesh.Clear();
 
         mesh.subMeshCount = 2;
@@ -50,28 +59,36 @@ public class ChunkRenderer : MonoBehaviour
         mesh.SetTriangles(meshData.waterMesh.triangles.Select(val => val + meshData.vertices.Count).ToArray(), 1);
 
         mesh.uv = meshData.uv.Concat(meshData.waterMesh.uv).ToArray();
+        mesh.Optimize();
         mesh.RecalculateNormals();
 
         meshCollider.sharedMesh = null;
-
+        Mesh collisionMesh = new Mesh();
         collisionMesh.vertices = meshData.colliderVertices.ToArray();
         collisionMesh.triangles = meshData.colliderTriangles.ToArray();
+        collisionMesh.Optimize();
         collisionMesh.RecalculateNormals();
 
         meshCollider.sharedMesh = collisionMesh;
+
+        GetComponent<MeshCollider>().sharedMesh = collisionMesh;
     }
 
+    // Обновление чанка
+    [ContextMenu("Test")]
     public void UpdateChunk()
     {
         RenderMesh(Chunk.GetChunkMeshData(ChunkData));
     }
 
+    // Обновление чанка с заданными данными меша
     public void UpdateChunk(MeshData data)
     {
         RenderMesh(data);
     }
 
 #if UNITY_EDITOR
+    // Отрисовка гизмо в редакторе
     private void OnDrawGizmos()
     {
         if (showGizmo)

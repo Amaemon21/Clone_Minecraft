@@ -3,8 +3,11 @@ using UnityEngine;
 
 public class WorldRenderer : MonoBehaviour
 {
-    public GameObject chunkPrefab;
+    public ChunkRenderer chunkPrefab;
+    [SerializeField] private Transform _parent;
     public Queue<ChunkRenderer> chunkPool = new Queue<ChunkRenderer>();
+
+    ChunkRenderer newChunk;
 
     public void Clear(WorldData worldData)
     {
@@ -12,23 +15,27 @@ public class WorldRenderer : MonoBehaviour
         {
             Destroy(item.gameObject);
         }
-
         chunkPool.Clear();
     }
-    
+
+    public void Init(WorldData worldData, Vector3Int position)
+    {
+        newChunk.InitializeChunk(worldData.chunkDataDictionary[position]);
+    }
+
     internal ChunkRenderer RenderChunk(WorldData worldData, Vector3Int position, MeshData meshData)
     {
-        ChunkRenderer newChunk = null;
+        newChunk = null;
 
-        if(chunkPool.Count > 0)
+        if (chunkPool.Count > 0)
         {
             newChunk = chunkPool.Dequeue();
             newChunk.transform.position = position;
         }
         else
         {
-            GameObject chunkObject = Instantiate(chunkPrefab, position, Quaternion.identity);
-            newChunk = chunkObject.GetComponent<ChunkRenderer>();
+            newChunk = Instantiate(chunkPrefab, position, Quaternion.identity, _parent);
+            newChunk.Init();
         }
 
         newChunk.InitializeChunk(worldData.chunkDataDictionary[position]);

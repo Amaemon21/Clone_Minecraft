@@ -5,34 +5,43 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.Events;
-using static UnityEditor.PlayerSettings;
 
 public class World : MonoBehaviour
 {
-    public int mapSizeInChunks = 6;
-    public int chunkSize = 16, chunkHeight = 100;
-    public int chunkDrawingRange = 8;
+    // Переменные для определения свойств мира и чанков
+    public int mapSizeInChunks = 6;  // Количество чанков в мире
+    public int chunkSize = 16;  // Размер каждого чанка
+    public int chunkHeight = 100;  // Высота каждого чанка
+    public int chunkDrawingRange = 8;  // Радиус вокруг игрока для отрисовки чанков
 
-    public GameObject chunkPrefab;
-    public WorldRenderer worldRenderer;
+    // Префабы и менеджеры
+    public GameObject chunkPrefab;  // Префаб для игрового объекта чанка
+    public WorldRenderer worldRenderer;  // Рендерер мира
+    public BlockDataManager blockDataManager;  // Менеджер для данных блоков
+    public TerrainGenerator terrainGenerator;  // Логика генерации местности
+    public Vector2Int mapSeedOffset;  // Смещение для сид мира
 
-    public TerrainGenerator terrainGenerator;
-    public Vector2Int mapSeedOffset;
-
+    // Токен отмены для асинхронных задач
     CancellationTokenSource taskTokenSource = new CancellationTokenSource();
 
+    // События, вызываемые при создании мира и генерации новых чанков
     public UnityEvent OnWorldCreated, OnNewChunksGenerated;
 
     public bool isSpawn;
 
-    public WorldData worldData { get; private set; }
-    public bool IsWorldCreated { get; private set; }
+    // Словарь для хранения данных сеток чанков
+    ConcurrentDictionary<Vector3Int, MeshData> meshDataDictionary = new ConcurrentDictionary<Vector3Int, MeshData>();
 
+    // Свойства для доступа к данным мира
+    public WorldData worldData { get; private set; }  // Данные, представляющие мир
+    public bool IsWorldCreated { get; private set; }  // Флаг, указывающий, создан ли мир
+
+    // Логика инициализации
     private void Awake()
     {
+        // Создание экземпляра данных мира
         worldData = new WorldData
         {
             chunkHeight = this.chunkHeight,
@@ -40,19 +49,27 @@ public class World : MonoBehaviour
             chunkDataDictionary = new Dictionary<Vector3Int, ChunkData>(),
             chunkDictionary = new Dictionary<Vector3Int, ChunkRenderer>()
         };
+
+        // Инициализация менеджера данных блоков
+        blockDataManager.Init();
     }
 
+    // Метод для генерации мира
+    [ContextMenu("GenerateWorld")]
     public async void GenerateWorld()
     {
         await GenerateWorld(Vector3Int.zero);
     }
 
+    // Асинхронный метод для генерации мира
     private async Task GenerateWorld(Vector3Int position)
     {
         terrainGenerator.GenerateBiomePoints(position, chunkDrawingRange, chunkSize, mapSeedOffset);
 
+        // Вычисление данных генерации мира в отдельной задаче
         WorldGenerationData worldGenerationData = await Task.Run(() => GetPositionsThatPlayerSees(position), taskTokenSource.Token);
 
+        // Удаление ненужных чанков и данных чанков
         foreach (Vector3Int pos in worldGenerationData.chunkPositionsToRemove)
             WorldDataHelper.RemoveChunk(this, pos);
 
@@ -63,53 +80,54 @@ public class World : MonoBehaviour
 
         try
         {
+            // Вычисление данных чанков асинхронно
             dataDictionary = await CalculateWorldChunkData(worldGenerationData.chunkDataPositionsToCreate);
         }
         catch (Exception)
         {
-            Debug.Log("Task canceled");
+            Debug.Log("Задача отменена");
             return;
         }
 
-
+        // Добавление вычисленных данных чанков в данные мира
         foreach (var calculatedData in dataDictionary)
-        {
             worldData.chunkDataDictionary.Add(calculatedData.Key, calculatedData.Value);
-        }
 
+        // Добавление блоков деревьев к данным чанков
         foreach (var chunkData in worldData.chunkDataDictionary.Values)
-        {
             AddTreeLeafs(chunkData);
-        }
 
-        ConcurrentDictionary<Vector3Int, MeshData> meshDataDictionary = new ConcurrentDictionary<Vector3Int, MeshData>();
-
+        // Получение данных для отрисовки чанков
         List<ChunkData> dataToRender = worldData.chunkDataDictionary
             .Where(keyvaluepair => worldGenerationData.chunkPositionsToCreate.Contains(keyvaluepair.Key))
             .Select(keyvalpair => keyvalpair.Value)
             .ToList();
 
+        ConcurrentDictionary<Vector3Int, MeshData> meshDataDictionary = new ConcurrentDictionary<Vector3Int, MeshData>();
+
         try
         {
+            // Генерация данных сеток асинхронно
             meshDataDictionary = await CreateMeshDataAsync(dataToRender);
         }
         catch (Exception)
         {
-            Debug.Log("Task canceled");
+            Debug.Log("Задача отменена");
             return;
         }
 
+        // Запуск корутины для создания чанков
         StartCoroutine(ChunkCreationCoroutine(meshDataDictionary));
     }
 
+    // Метод для добавления блоков деревьев к данным чанков
     private void AddTreeLeafs(ChunkData chunkData)
     {
         foreach (var treeLeafes in chunkData.treeData.treeLeafesSolid)
-        {
-            Chunk.SetBlock(chunkData, treeLeafes, BlockType.TreeLeafesTransparent);
-        }
+            Chunk.SetBlock(chunkData, treeLeafes, BlockType.TreeLeafsSolid);
     }
 
+    // Асинхронный метод для создания данных сеток для отрисовки чанков
     private Task<ConcurrentDictionary<Vector3Int, MeshData>> CreateMeshDataAsync(List<ChunkData> dataToRender)
     {
         ConcurrentDictionary<Vector3Int, MeshData> dictionary = new ConcurrentDictionary<Vector3Int, MeshData>();
@@ -119,18 +137,17 @@ public class World : MonoBehaviour
             foreach (ChunkData data in dataToRender)
             {
                 if (taskTokenSource.Token.IsCancellationRequested)
-                {
                     taskTokenSource.Token.ThrowIfCancellationRequested();
-                }
+
                 MeshData meshData = Chunk.GetChunkMeshData(data);
                 dictionary.TryAdd(data.worldPosition, meshData);
             }
 
             return dictionary;
-        }, taskTokenSource.Token
-        );
+        }, taskTokenSource.Token);
     }
 
+    // Асинхронный метод для вычисления данных чанков мира
     private Task<ConcurrentDictionary<Vector3Int, ChunkData>> CalculateWorldChunkData(List<Vector3Int> chunkDataPositionsToCreate)
     {
         ConcurrentDictionary<Vector3Int, ChunkData> dictionary = new ConcurrentDictionary<Vector3Int, ChunkData>();
@@ -140,19 +157,15 @@ public class World : MonoBehaviour
             foreach (Vector3Int pos in chunkDataPositionsToCreate)
             {
                 if (taskTokenSource.Token.IsCancellationRequested)
-                {
                     taskTokenSource.Token.ThrowIfCancellationRequested();
-                }
 
                 ChunkData data = new ChunkData(chunkSize, chunkHeight, this, pos);
                 ChunkData newData = terrainGenerator.GenerateChunkData(data, mapSeedOffset);
                 dictionary.TryAdd(pos, newData);
             }
-
             return dictionary;
         },
-        taskTokenSource.Token
-        );
+        taskTokenSource.Token);
     }
 
     IEnumerator ChunkCreationCoroutine(ConcurrentDictionary<Vector3Int, MeshData> meshDataDictionary)
@@ -174,7 +187,6 @@ public class World : MonoBehaviour
     {
         ChunkRenderer chunkRenderer = worldRenderer.RenderChunk(worldData, position, meshData);
         worldData.chunkDictionary.Add(position, chunkRenderer);
-
     }
 
     internal bool SetBlock(RaycastHit hit, BlockType blockType)
@@ -182,21 +194,22 @@ public class World : MonoBehaviour
         ChunkRenderer chunk = hit.collider.GetComponent<ChunkRenderer>();
 
         if (chunk == null)
+        {
+            Debug.Log("Chunk NULL");
             return false;
+        }
 
         Vector3Int pos = GetBlockPos(hit);
 
         WorldDataHelper.SetBlock(chunk.ChunkData.worldReference, pos, blockType);
         chunk.ModifiedByThePlayer = true;
-
         if (Chunk.IsOnEdge(chunk.ChunkData, pos))
         {
             List<ChunkData> neighbourDataList = Chunk.GetEdgeNeighbourChunk(chunk.ChunkData, pos);
-
             foreach (ChunkData neighbourData in neighbourDataList)
             {
+                //neighbourData.modifiedByThePlayer = true;
                 ChunkRenderer chunkToUpdate = WorldDataHelper.GetChunk(neighbourData.worldReference, neighbourData.worldPosition);
-
                 if (chunkToUpdate != null)
                     chunkToUpdate.UpdateChunk();
             }
@@ -206,9 +219,23 @@ public class World : MonoBehaviour
         return true;
     }
 
-    public Vector2Int GetChunkContainingBlock(Vector3Int blockWorldPos)
+    internal bool SetBlock(RaycastHit hit, BlockType blockType, ChunkRenderer OtherChunkRenderer)
     {
-        return Vector2Int.FloorToInt(new Vector2(blockWorldPos.x * 1f / chunkSize, blockWorldPos.z * 1f / chunkSize));
+        ChunkRenderer chunk = hit.collider.GetComponent<ChunkRenderer>();
+
+        if (chunk == null)
+        {
+            Debug.Log("Chunk NULL");
+            return false;
+        }
+
+        Vector3Int pos = GetBlockPos(hit);
+
+        WorldDataHelper.SetBlock(chunk.ChunkData.worldReference, pos, blockType);
+        chunk.ModifiedByThePlayer = true;
+        chunk.UpdateChunk();
+        OtherChunkRenderer.UpdateChunk();
+        return true;
     }
 
     private Vector3Int GetBlockPos(RaycastHit hit)
@@ -224,17 +251,10 @@ public class World : MonoBehaviour
 
     private float GetBlockPositionIn(float pos, float normal)
     {
-        if (Mathf.Abs(pos % 1) == 0.5f)
-        {
-            if (Input.GetMouseButtonDown(1))
-            {
-                pos += (normal / 2);
-            }
-            else
-            {
-                pos -= (normal / 2);
-            }
-        }
+        if (isSpawn)
+            pos += (normal / 2);
+        else
+            pos -= (normal / 2);
 
         return (float)pos;
     }
@@ -259,11 +279,11 @@ public class World : MonoBehaviour
             chunkDataToRemove = chunkDataToRemove,
             chunkPositionsToUpdate = new List<Vector3Int>()
         };
-        return data;
 
+        return data;
     }
 
-    internal async void LoadAdditionalChunksRequest(GameObject player)
+    internal async void LoadAdditionalChunksRequest(Character player)
     {
         Debug.Log("Load more chunks");
         await GenerateWorld(Vector3Int.RoundToInt(player.transform.position));
@@ -279,6 +299,7 @@ public class World : MonoBehaviour
 
         if (containerChunk == null)
             return BlockType.Nothing;
+
         Vector3Int blockInCHunkCoordinates = Chunk.GetBlockInChunkCoordinates(containerChunk, new Vector3Int(x, y, z));
         return Chunk.GetBlockFromChunkCoordinates(containerChunk, blockInCHunkCoordinates);
     }
@@ -296,8 +317,6 @@ public class World : MonoBehaviour
         public List<Vector3Int> chunkDataToRemove;
         public List<Vector3Int> chunkPositionsToUpdate;
     }
-
-
 }
 public struct WorldData
 {

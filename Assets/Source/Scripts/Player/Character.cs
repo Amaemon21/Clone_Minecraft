@@ -1,48 +1,104 @@
 using UnityEngine;
 
-public class Character : MonoBehaviour
+public class Character : MonoCache
 {
     [SerializeField] private Camera mainCamera;
     [SerializeField] private float maxDistance = 5;
     [SerializeField] private float minDistance = 5;
     [SerializeField] private LayerMask groundMask;
 
-    private World world;
+    [SerializeField] private World _world;
+    private float rayDistance = 5f;
+    private bool isDestroing;
 
-    [System.Obsolete]
-    private void Awake()
+    private Ray _ray;
+    private RaycastHit _hit;
+
+    public ChunkRenderer ChunkRenderer { get; private set; }
+
+    public void Init(World world)
     {
-        world = FindObjectOfType<World>();
+        _world = world;
     }
 
     private void Update()
     {
-        Ray ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
-        RaycastHit hit;
+        _ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
 
         if (Input.GetKeyDown(KeyCode.Mouse0) || Input.GetKeyDown(KeyCode.Mouse1))
         {
-            bool isDestroing = Input.GetKeyDown(KeyCode.Mouse0);
+            isDestroing = Input.GetKeyDown(KeyCode.Mouse0);
+            _world.isSpawn = !isDestroing;
 
-            if (isDestroing)
+            if (Physics.Raycast(_ray, out _hit, maxDistance, groundMask))
             {
-                if (Physics.Raycast(ray, out hit, maxDistance, groundMask))
+                if (isDestroing)
                 {
-                    world.isSpawn = false;
-                    world.SetBlock(hit, BlockType.Air);
-                }    
-            }
-            else
-            {
-                if (Physics.Raycast(ray, out hit, maxDistance, groundMask))
+                    _world.SetBlock(_hit, BlockType.Air);
+                }
+                else
                 {
-                    if (hit.distance >= minDistance)
+                    if (_hit.distance >= minDistance)
                     {
-                        world.isSpawn = true;
-                        world.SetBlock(hit, BlockType.Sand);
+                        if (CheckChunkRenderer())
+                        {
+                            _world.SetBlock(_hit, BlockType.Stone, ChunkRenderer);
+                        }
                     }
                 }
             }
         }
+    }
+
+    public void SpawnBlock()
+    {
+        isDestroing = false;
+        _world.isSpawn = !isDestroing;
+
+        Ray _ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+        RaycastHit _hit;
+
+        if (Physics.Raycast(_ray, out _hit, maxDistance, groundMask))
+        {
+            if (_hit.distance >= minDistance) 
+            { 
+                if (CheckChunkRenderer())
+                {
+                    _world.SetBlock(_hit, BlockType.Stone, ChunkRenderer);
+                }
+            }
+        }
+    }
+
+    public void DestroyBlock()
+    {
+        isDestroing = true;
+        _world.isSpawn = !isDestroing;
+
+        Ray _ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+        RaycastHit _hit;
+
+        if (Physics.Raycast(_ray, out _hit, maxDistance, groundMask))
+        {
+            _world.SetBlock(_hit, BlockType.Air);
+        }
+    }
+
+    private bool CheckChunkRenderer()
+    {
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, rayDistance, groundMask))
+        {
+            var hitCollider = hit.collider;
+
+            if (hitCollider.TryGetComponent<ChunkRenderer>(out ChunkRenderer chunkRenderer))
+            {
+                ChunkRenderer = chunkRenderer;
+                return true;
+            }
+        }
+
+        return false;
     }
 }   

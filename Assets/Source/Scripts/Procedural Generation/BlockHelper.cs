@@ -4,15 +4,16 @@ public static class BlockHelper
 {
     private static Direction[] directions =
     {
-        Direction.backwards,
-        Direction.down,
-        Direction.foreward,
-        Direction.left,
-        Direction.right,
-        Direction.up
+        Direction.backwards, // Назад
+        Direction.down, // Вниз
+        Direction.foreward, // Вперёд
+        Direction.left, // Влево
+        Direction.right, // Вправо
+        Direction.up // Вверх
     };
 
-    public static MeshData GetMeshData (ChunkData chunk, int x, int y, int z, MeshData meshData, BlockType blockType)
+    // Получение данных о сетке меша блока
+    public static MeshData GetMeshData(ChunkData chunk, int x, int y, int z, MeshData meshData, BlockType blockType)
     {
         if (blockType == BlockType.Air || blockType == BlockType.Nothing)
             return meshData;
@@ -39,54 +40,54 @@ public static class BlockHelper
         return meshData;
     }
 
+    // Получение данных о грани блока
     public static MeshData GetFaceDataIn(Direction direction, ChunkData chunk, int x, int y, int z, MeshData meshData, BlockType blockType)
     {
         GetFaceVertices(direction, x, y, z, meshData, blockType);
         meshData.AddQuadTriangles(BlockDataManager.blockTextureDataDictionary[blockType].generatesCollider);
         meshData.uv.AddRange(FaceUVs(direction, blockType));
 
-
         return meshData;
     }
 
+    // Получение вершин грани блока
     public static void GetFaceVertices(Direction direction, int x, int y, int z, MeshData meshData, BlockType blockType)
     {
         var generatesCollider = BlockDataManager.blockTextureDataDictionary[blockType].generatesCollider;
-        //order of vertices matters for the normals and how we render the mesh
+        // Порядок вершин имеет значение для нормалей и отображения меша
         switch (direction)
         {
-            case Direction.backwards:
+            case Direction.backwards: // Назад
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y + 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 break;
-            case Direction.foreward:
+            case Direction.foreward: // Вперёд
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 break;
-            case Direction.left:
+            case Direction.left: // Влево
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y + 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 break;
-
-            case Direction.right:
+            case Direction.right: // Вправо
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 break;
-            case Direction.down:
+            case Direction.down: // Вниз
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z - 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x - 0.5f, y - 0.5f, z + 0.5f), generatesCollider);
                 break;
-            case Direction.up:
+            case Direction.up: // Вверх
                 meshData.AddVertex(new Vector3(x - 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f), generatesCollider);
                 meshData.AddVertex(new Vector3(x + 0.5f, y + 0.5f, z - 0.5f), generatesCollider);
@@ -97,6 +98,7 @@ public static class BlockHelper
         }
     }
 
+    // Получение UV-координат грани блока
     public static Vector2[] FaceUVs(Direction direction, BlockType blockType)
     {
         Vector2[] UVs = new Vector2[4];

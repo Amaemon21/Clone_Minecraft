@@ -8,7 +8,7 @@ public class BlockDataManager : MonoBehaviour
     public static Dictionary<BlockType, TextureData> blockTextureDataDictionary = new Dictionary<BlockType, TextureData>();
     public BlockDataSO textureData;
 
-    private void Awake()
+    public void Init()
     {
         foreach (var item in textureData.textureDataList)
         {
@@ -17,7 +17,6 @@ public class BlockDataManager : MonoBehaviour
                 blockTextureDataDictionary.Add(item.blockType, item);
             };
         }
-
         tileSizeX = textureData.textureSizeX;
         tileSizeY = textureData.textureSizeY;
     }

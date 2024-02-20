@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/VoxelWorld.unity
     guid: 8bb64bd2f99b99e48866efc96cd1fefe
+  - enabled: 0
+    path: Assets/Scenes/PlayerTest.unity
+    guid: 845d150c2b1faeb4fb976dcddfcc40a9
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

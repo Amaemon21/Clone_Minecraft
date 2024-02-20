@@ -1,22 +1,21 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class BiomeGenerator : MonoBehaviour
 {
-    public int waterThreshold = 50;
+    public int waterThreshold = 50; // Порог воды
 
-    public NoiseSettings biomeNoiseSettings;
+    public NoiseSettings biomeNoiseSettings; // Настройки шума биома
 
-    public DomainWarping domainWarping;
+    public DomainWarping domainWarping; // Искажение домена
 
-    public bool useDomainWarping = true;
+    public bool useDomainWarping = true; // Использовать ли искажение домена
 
-    public BlockLayerHandler startLayerHandler;
+    public BlockLayerHandler startLayerHandler; // Обработчик стартового слоя
 
-    public TreeGenerator treeGenerator;
+    public TreeGenerator treeGenerator; // Генератор деревьев
 
+    // Получение данных о деревьях
     internal TreeData GetTreeData(ChunkData data, Vector2Int mapSeedOffset)
     {
         if (treeGenerator == null)
@@ -24,8 +23,9 @@ public class BiomeGenerator : MonoBehaviour
         return treeGenerator.GenerateTreeData(data, mapSeedOffset);
     }
 
-    public List<BlockLayerHandler> additionalLayerHandlers;
+    public List<BlockLayerHandler> additionalLayerHandlers; // Дополнительные обработчики слоев
 
+    // Обработка столбца чанка
     public ChunkData ProcessChunkColumn(ChunkData data, int x, int z, Vector2Int mapSeedOffset, int? terrainHeightNoise)
     {
         biomeNoiseSettings.worldOffset = mapSeedOffset;
@@ -48,6 +48,7 @@ public class BiomeGenerator : MonoBehaviour
         return data;
     }
 
+    // Получение высоты поверхности по шуму
     public int GetSurfaceHeightNoise(int x, int z, int chunkHeight)
     {
         float terrainHeight;

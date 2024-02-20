@@ -5,25 +5,25 @@ using UnityEngine;
 
 public class TerrainGenerator : MonoBehaviour
 {
-    public BiomeGenerator biomeGenerator;
+    public BiomeGenerator biomeGenerator; // Генератор биомов
 
     [SerializeField]
-    List<Vector3Int> biomeCenters = new List<Vector3Int>();
-    List<float> biomeNoise = new List<float>();
+    List<Vector3Int> biomeCenters = new List<Vector3Int>(); // Центры биомов
+    List<float> biomeNoise = new List<float>(); // Шум биомов
 
     [SerializeField]
-    private NoiseSettings biomeNoiseSettings;
+    private NoiseSettings biomeNoiseSettings; // Настройки шума биомов
 
-    public DomainWarping biomeDomainWarping;
+    public DomainWarping biomeDomainWarping; // Искажение домена биомов
 
     [SerializeField]
-    private List<BiomeData> biomeGeneratorsData = new List<BiomeData>();
+    private List<BiomeData> biomeGeneratorsData = new List<BiomeData>(); // Данные генераторов биомов
 
-
+    // Генерация данных чанка
     public ChunkData GenerateChunkData(ChunkData data, Vector2Int mapSeedOffset)
     {
         BiomeGeneratorSelection biomeSelection = SelectBiomeGenerator(data.worldPosition, data, false);
-        //TreeData treeData = biomeGenerator.GetTreeData(data, mapSeedOffset);
+
         data.treeData = biomeSelection.biomeGenerator.GetTreeData(data, mapSeedOffset);
         for (int x = 0; x < data.chunkSize; x++)
         {
@@ -36,6 +36,7 @@ public class TerrainGenerator : MonoBehaviour
         return data;
     }
 
+    // Выбор генератора биома
     private BiomeGeneratorSelection SelectBiomeGenerator(Vector3Int worldPosition, ChunkData data, bool useDomainWarping = true)
     {
         if (useDomainWarping == true)
@@ -59,6 +60,7 @@ public class TerrainGenerator : MonoBehaviour
         return new BiomeGeneratorSelection(generator_1, Mathf.RoundToInt(terrainHeightNoise_0 * weight_0 + terrainHeightNoise_1 * weight_1));
     }
 
+    // Выбор биома
     private BiomeGenerator SelectBiome(int index)
     {
         float temp = biomeNoise[index];
@@ -70,12 +72,14 @@ public class TerrainGenerator : MonoBehaviour
         return biomeGeneratorsData[0].biomeTerrainGenerator;
     }
 
+    // Получение помощников выбора генератора биома
     private List<BiomeSelectionHelper> GetBiomeGeneratorSelectionHelpers(Vector3Int position)
     {
         position.y = 0;
         return GetClosestBiomeIndex(position);
     }
 
+    // Получение индексов ближайших биомов
     private List<BiomeSelectionHelper> GetClosestBiomeIndex(Vector3Int position)
     {
         return biomeCenters.Select((center, index) =>
@@ -86,12 +90,14 @@ public class TerrainGenerator : MonoBehaviour
         }).OrderBy(helper => helper.Distance).Take(4).ToList();
     }
 
+    // Структура помощника выбора биома
     private struct BiomeSelectionHelper
     {
         public int Index;
         public float Distance;
     }
 
+    // Генерация точек биомов
     public void GenerateBiomePoints(Vector3 playerPosition, int drawRange, int mapSize, Vector2Int mapSeedOffset)
     {
         biomeCenters = new List<Vector3Int>();
@@ -106,12 +112,14 @@ public class TerrainGenerator : MonoBehaviour
         biomeNoise = CalculateBiomeNoise(biomeCenters, mapSeedOffset);
     }
 
+    // Вычисление шума биомов
     private List<float> CalculateBiomeNoise(List<Vector3Int> biomeCenters, Vector2Int mapSeedOffset)
     {
         biomeNoiseSettings.worldOffset = mapSeedOffset;
         return biomeCenters.Select(center => MyNoise.OctavePerlin(center.x, center.y, biomeNoiseSettings)).ToList();
     }
 
+    // Отрисовка гизмо
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.blue;
@@ -123,6 +131,7 @@ public class TerrainGenerator : MonoBehaviour
     }
 }
 
+// Структура данных биома
 [Serializable]
 public struct BiomeData
 {
@@ -131,10 +140,11 @@ public struct BiomeData
     public BiomeGenerator biomeTerrainGenerator;
 }
 
+// Класс выбора генератора биома
 public class BiomeGeneratorSelection
 {
-    public BiomeGenerator biomeGenerator = null;
-    public int? terrainSurfaceNoise = null;
+    public BiomeGenerator biomeGenerator = null; // Генератор биома
+    public int? terrainSurfaceNoise = null; // Шум поверхности территории
 
     public BiomeGeneratorSelection(BiomeGenerator biomeGeneror, int? terrainSurfaceNoise = null)
     {
